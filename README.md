@@ -8,6 +8,7 @@ Before you begin, you need to:
 
 1. Have a Google Account
 2. Set up a Google Cloud Project
+3. Have an OpenAI API key
 
 ## Initial Setup
 
@@ -67,6 +68,7 @@ GOOGLE_CLIENT_ID=your_client_id_here
 GOOGLE_CLIENT_SECRET=your_client_secret_here
 GOOGLE_REDIRECT_URI=http://localhost:3000/auth/callback
 NEXT_PUBLIC_API_URL=http://localhost:3000/api
+OPENAI_API_KEY=your_openai_api_key_here
 ~~~
 
 4. Start the development server:
@@ -85,7 +87,12 @@ yarn dev
 4. Enter your form details:
    - Title
    - Description/Questions (one per line)
-   - Add "explain" to any question that should be a paragraph-type response
+   - The AI will automatically detect question types:
+     - Multiple choice questions with options will be RADIO type
+     - Rating questions will be SCALE type (1-5)
+     - Questions asking for explanations will be PARAGRAPH type
+     - Questions with multiple possible answers will be CHECKBOX type
+     - Simple short answers will be TEXT type
 5. Click "Generate Form"
 6. Use the generated form URL to access your new Google Form
 
@@ -93,7 +100,8 @@ yarn dev
 
 - OAuth 2.0 authentication with Google
 - Automatic form generation
-- Support for text and paragraph questions
+- AI-powered question type detection using OpenAI
+- Support for multiple question types (text, paragraph, radio, checkbox, scale)
 - Direct integration with user's Google account
 - Forms appear in user's Google Drive
 
@@ -101,8 +109,8 @@ yarn dev
 
 - The application uses the Google Forms API v1
 - Forms are created under the authenticated user's account
-- Questions are parsed from the description field (one per line)
-- Questions containing "explain" are created as paragraph-type questions
+- Questions are intelligently parsed using OpenAI's GPT model
+- Supports various question types based on context and phrasing
 
 ## Troubleshooting
 
@@ -116,8 +124,14 @@ yarn dev
    - Check the user has granted necessary permissions
    - Review API quotas in Google Cloud Console
 
+3. If AI parsing fails:
+   - Verify your OpenAI API key is correct
+   - Check the API key has sufficient credits
+   - Ensure the API key has the necessary permissions
+
 ## Security Notes
 
 - OAuth tokens are stored in localStorage (consider more secure alternatives for production)
 - Always use HTTPS in production
 - Keep your Google Cloud credentials secure
+- Protect your OpenAI API key and never expose it client-side
