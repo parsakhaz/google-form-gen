@@ -115,7 +115,9 @@ yarn dev
 ## Troubleshooting
 
 1. If authentication fails:
-   - Verify your OAuth credentials
+   - The application will automatically attempt to refresh expired tokens
+   - If token refresh fails, you will be redirected to login again
+   - Verify your OAuth credentials and consent screen configuration
    - Check that redirect URIs are correctly configured
    - Ensure all required scopes are added to the consent screen
 

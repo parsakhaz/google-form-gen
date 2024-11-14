@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { google } from 'googleapis';
 import { parseFormDescription } from '@/services/openai';
+import { OAuth2Client } from 'google-auth-library';
 
 type ResponseData = {
   success: boolean;
@@ -8,6 +9,19 @@ type ResponseData = {
   error?: string;
   details?: any;
 };
+
+// Helper function to refresh token
+async function refreshAccessToken(oauth2Client: OAuth2Client, refreshToken: string) {
+  try {
+    oauth2Client.setCredentials({
+      refresh_token: refreshToken
+    });
+    const { credentials } = await oauth2Client.refreshAccessToken();
+    return credentials;
+  } catch (error) {
+    throw new Error('Failed to refresh access token');
+  }
+}
 
 export default async function handler(
   req: NextApiRequest,

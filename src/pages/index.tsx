@@ -4,6 +4,7 @@ import { FormDescriptionInput } from '@/components/FormDescriptionInput';
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ClipLoader } from 'react-spinners';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
 	const [formUrl, setFormUrl] = React.useState<string | null>(null);
@@ -13,13 +14,46 @@ export default function Home() {
 		title: string;
 		description: string;
 	} | null>(null);
+	const [error, setError] = React.useState<string | null>(null);
+	const router = useRouter();
 
 	useEffect(() => {
-		const tokens = localStorage.getItem('googleTokens');
-		if (tokens) {
-			setIsAuthenticated(true);
-		}
-		
+		const validateToken = async () => {
+			const tokens = localStorage.getItem('googleTokens');
+			if (!tokens) {
+				setIsAuthenticated(false);
+				return;
+			}
+
+			try {
+				// Validate token with Google
+				const response = await fetch('/api/validateToken', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({ tokens: JSON.parse(tokens) }),
+				});
+
+				if (!response.ok) {
+					// Token invalid - clear storage and set as unauthenticated
+					localStorage.removeItem('googleTokens');
+					setIsAuthenticated(false);
+					return;
+				}
+
+				setIsAuthenticated(true);
+			} catch (error) {
+				console.error('Token validation error:', error);
+				localStorage.removeItem('googleTokens');
+				setIsAuthenticated(false);
+			}
+		};
+
+		validateToken();
+	}, []);
+
+	useEffect(() => {
 		// Restore last form data
 		const savedFormData = localStorage.getItem('lastFormData');
 		if (savedFormData) {
@@ -34,7 +68,7 @@ export default function Home() {
 			localStorage.setItem('lastFormData', JSON.stringify(formData));
 			setLastFormData(formData);
 			
-			const tokens = localStorage.getItem('googleTokens');
+			const tokens = JSON.parse(localStorage.getItem('googleTokens') || '{}');
 			
 			const response = await fetch('/api/createForm', {
 				method: 'POST',
@@ -42,17 +76,38 @@ export default function Home() {
 					'Content-Type': 'application/json',
 				},
 				body: JSON.stringify({
-					tokens: JSON.parse(tokens || '{}'),
+					tokens: {
+						access_token: tokens.access_token,
+						refresh_token: tokens.refresh_token
+					},
 					formData,
 				}),
 			});
 
 			const data = await response.json();
+
+			if (!response.ok) {
+				if (response.status === 401) {
+					// Token expired and refresh failed, redirect to login
+					router.push('/auth/login');
+					return;
+				}
+				throw new Error(data.error || 'Failed to create form');
+			}
+
+			// If we got new credentials, update them
+			if (data.credentials) {
+				localStorage.setItem('googleTokens', JSON.stringify(data.credentials));
+			}
+
 			if (data.success) {
 				setFormUrl(data.formUrl);
+			} else {
+				throw new Error(data.error || 'Failed to create form');
 			}
-		} catch (error) {
+		} catch (error: any) {
 			console.error('Error creating form:', error);
+			setError(error.message);
 		} finally {
 			setIsLoading(false);
 		}
